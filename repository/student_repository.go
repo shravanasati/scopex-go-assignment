@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
@@ -15,13 +15,17 @@ type StudentRepository interface {
 	CreateStudent(student model.Student) (int64, error)
 	GetAllStudents(limit, offset int) (model.Students, error)
 	GetStudentByID(id int64) (model.Student, error)
+	GetStudentByEmail(email string) (model.Student, error)
 	UpdateStudent(id int64, student model.Student) error
 	DeleteStudent(id int64) error
 }
-
 type studentRepository struct{}
 
 var StudentRepo StudentRepository = &studentRepository{}
+
+// ErrStudentNotFound indicates that the requested student record does not
+// exist in persistent storage.
+var ErrStudentNotFound = errors.New("student not found")
 
 // CreateStudent inserts a new student into the database
 func (r *studentRepository) CreateStudent(student model.Student) (int64, error) {
@@ -94,11 +98,31 @@ func (r *studentRepository) GetStudentByID(id int64) (model.Student, error) {
 	query := "SELECT id, name, email, department, created_at FROM students WHERE id = ?"
 	err := db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.Email, &s.Department, &s.CreatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return s, fmt.Errorf("student not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return s, ErrStudentNotFound
 		}
 		log.Println("Error querying student by ID: " + err.Error())
 		return s, err
+	}
+
+	return s, nil
+}
+
+// GetStudentByEmail retrieves a student record by email address.
+func (r *studentRepository) GetStudentByEmail(email string) (model.Student, error) {
+	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var s model.Student
+
+	query := "SELECT id, name, email, department, created_at FROM students WHERE email = ?"
+	err := db.QueryRowContext(ctx, query, email).Scan(&s.ID, &s.Name, &s.Email, &s.Department, &s.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.Student{}, nil
+		}
+		return model.Student{}, err
 	}
 
 	return s, nil
@@ -117,10 +141,17 @@ func (r *studentRepository) UpdateStudent(id int64, student model.Student) error
 	}
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, student.Name, student.Email, student.Department, id)
+	result, err := stmt.ExecContext(ctx, student.Name, student.Email, student.Department, id)
 	if err != nil {
 		log.Println("Error updating student: " + err.Error())
 		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrStudentNotFound
 	}
 
 	return nil
@@ -139,10 +170,17 @@ func (r *studentRepository) DeleteStudent(id int64) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, id)
+	result, err := stmt.ExecContext(ctx, id)
 	if err != nil {
 		log.Println("Error deleting student: " + err.Error())
 		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrStudentNotFound
 	}
 
 	return nil

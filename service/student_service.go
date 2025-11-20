@@ -1,9 +1,9 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	model "github.com/shravanasati/scopex-go-assignment/model"
 	repository "github.com/shravanasati/scopex-go-assignment/repository"
@@ -42,20 +42,14 @@ func createStudent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	id, err := repository.StudentRepo.CreateStudent(student)
+
+	created, err := studentSvc.CreateStudent(student)
 	if err != nil {
-		// Check for duplicate entry error (MySQL error 1062)
-		// This is a simplified check. In a real app, we might check the error code more robustly.
-		if strings.Contains(err.Error(), "Duplicate entry") {
-			c.JSON(http.StatusConflict, gin.H{"error": "Student already exists"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create student: " + err.Error()})
+		handleStudentError(c, err)
 		return
 	}
 
-	student.ID = id
-	c.JSON(http.StatusCreated, student)
+	c.JSON(http.StatusCreated, created)
 }
 
 // getAllStudents godoc
@@ -86,7 +80,7 @@ func getAllStudents(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
-	students, err := repository.StudentRepo.GetAllStudents(limit, offset)
+	students, err := studentSvc.GetAllStudents(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch students"})
 		return
@@ -115,9 +109,9 @@ func getStudentByID(c *gin.Context) {
 		return
 	}
 
-	student, err := repository.StudentRepo.GetStudentByID(id)
+	student, err := studentSvc.GetStudentByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Student not found"})
+		handleStudentError(c, err)
 		return
 	}
 
@@ -151,14 +145,13 @@ func updateStudent(c *gin.Context) {
 		return
 	}
 
-	err = repository.StudentRepo.UpdateStudent(id, student)
+	updated, err := studentSvc.UpdateStudent(id, student)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update student"})
+		handleStudentError(c, err)
 		return
 	}
 
-	student.ID = id
-	c.JSON(http.StatusOK, student)
+	c.JSON(http.StatusOK, updated)
 }
 
 // deleteStudent godoc
@@ -181,11 +174,25 @@ func deleteStudent(c *gin.Context) {
 		return
 	}
 
-	err = repository.StudentRepo.DeleteStudent(id)
+	err = studentSvc.DeleteStudent(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete student"})
+		handleStudentError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully"})
+}
+
+func handleStudentError(c *gin.Context, err error) {
+	var validationErr *ValidationError
+	switch {
+	case errors.As(err, &validationErr):
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error(), "details": validationErr.Fields})
+	case errors.Is(err, ErrDuplicateStudentEmail):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, repository.ErrStudentNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }

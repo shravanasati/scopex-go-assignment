@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -27,20 +28,49 @@ import (
 var db sql.DB
 var client = &http.Client{}
 var userID int64
+var dbAvailable bool
 
-func TestMain(m *testing.T) {
+func TestMain(m *testing.M) {
 	viper.SetConfigFile("./resource/properties-test.yaml")
 
-	viper.ReadInConfig()
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Println("Warning: Could not read config file:", err)
+	}
 
 	util.Pool = util.SetupRedisJWT()
-
-	var err error
 
 	// Setup database
 	configuration.DB, err = configuration.SetupDB()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Warning: Database not available for integration tests:", err)
+		dbAvailable = false
+	} else {
+		// Test database connectivity
+		err = configuration.DB.Ping()
+		if err != nil {
+			log.Println("Warning: Database not reachable for integration tests:", err)
+			dbAvailable = false
+		} else {
+			dbAvailable = true
+		}
+	}
+
+	// Run tests
+	exitCode := m.Run()
+
+	// Cleanup
+	if configuration.DB != nil {
+		configuration.DB.Close()
+	}
+
+	// Exit with the test result code
+	os.Exit(exitCode)
+}
+
+func requireDB(t *testing.T) {
+	if !dbAvailable {
+		t.Skip("Skipping test: database not available")
 	}
 }
 
@@ -81,6 +111,7 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 
 // ====================== test API ======================
 func TestAPILoginUser(t *testing.T) {
+	requireDB(t)
 	payload := []byte(`{"username":"admin", "password":"admin1234"}`)
 
 	req, _ := http.NewRequest("POST", "/api/login", bytes.NewBuffer(payload))
@@ -95,6 +126,7 @@ func TestAPILoginUser(t *testing.T) {
 }
 
 func TestAPILogoutUser(t *testing.T) {
+	requireDB(t)
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
 
@@ -110,9 +142,8 @@ func TestAPILogoutUser(t *testing.T) {
 	tokenString := fmt.Sprintf("Bearer %v", token)
 	// ----------------------------------------------
 
-	payload := []byte(`{"username":"admin"}`)
-
-	req, _ := http.NewRequest("POST", "/api/logout", bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("GET", "/api/logout", nil)
+	req.Header.Set("Authorization", tokenString)
 	req.Header.Set("Authorization", tokenString)
 	resp := executeRequest(req)
 
@@ -121,11 +152,12 @@ func TestAPILogoutUser(t *testing.T) {
 	var m map[string]interface{}
 	json.Unmarshal(resp.Body.Bytes(), &m)
 
-	assert.Equal(t, m["message"], "Successfully logged out!")
+	assert.Equal(t, "Successfully logged out!", m["message"])
 
 }
 
 func TestAPICreateUser(t *testing.T) {
+	requireDB(t)
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
 
@@ -161,6 +193,7 @@ func TestAPICreateUser(t *testing.T) {
 	userID, _ = strconv.ParseInt(userIDstr, 10, 64)
 }
 func TestAPIGetByIDUser(t *testing.T) {
+	requireDB(t)
 
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
@@ -188,6 +221,7 @@ func TestAPIGetByIDUser(t *testing.T) {
 }
 
 func TestAPIGetByIDUserNotFound(t *testing.T) {
+	requireDB(t)
 
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
@@ -211,6 +245,7 @@ func TestAPIGetByIDUserNotFound(t *testing.T) {
 }
 
 func TestAPIGetAllUser(t *testing.T) {
+	requireDB(t)
 
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
@@ -234,6 +269,7 @@ func TestAPIGetAllUser(t *testing.T) {
 }
 
 func TestAPIDeleteByID(t *testing.T) {
+	requireDB(t)
 
 	// doing login first to get token
 	payloadLogin := []byte(`{"username":"admin", "password":"admin1234"}`)
@@ -260,7 +296,7 @@ func TestAPIDeleteByID(t *testing.T) {
 func TestFindUserById(t *testing.T) {
 	_, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	// simulate any sql driver behavior in tests, without needing a real database connection
@@ -278,12 +314,7 @@ func TestFindUserById(t *testing.T) {
 func TestFindUserByIdError(t *testing.T) {
 	db, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
-	}
-
-	db, err = configuration.SetupDB()
-	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	defer db.Close()
@@ -291,10 +322,8 @@ func TestFindUserByIdError(t *testing.T) {
 	// simulate any sql driver behavior in tests, without needing a real database connection
 	query := "select id, user_name, password from m_user where id = \\?"
 
-	rows := sqlmock.NewRows([]string{"id", "user_name", "password"}).
-		AddRow(user.ID, user.UserName, user.Password)
-
-	mock.ExpectQuery(query).WithArgs(user.ID).WillReturnRows(rows)
+	// Expect an error instead of returning rows
+	mock.ExpectQuery(query).WithArgs(user.ID).WillReturnError(sql.ErrNoRows)
 	// ------------ end of mock ---------------
 
 	// Context like a timeout or deadline or a channel to indicate stop working and return
@@ -304,8 +333,8 @@ func TestFindUserByIdError(t *testing.T) {
 	res := new(model.MUser)
 	err = db.QueryRowContext(ctx, "select id, user_name, password from m_user where id = ?", user.ID).Scan(&res.ID, &res.UserName, &res.Password)
 
-	assert.Empty(t, res)
 	assert.Error(t, err)
+	assert.Equal(t, sql.ErrNoRows, err)
 }
 
 func TestFindAllUser(t *testing.T) {
@@ -313,22 +342,17 @@ func TestFindAllUser(t *testing.T) {
 
 	db, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
-	}
-
-	db, err = configuration.SetupDB()
-	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	defer db.Close()
 
 	// simulate any sql driver behavior in tests, without needing a real database connection
-	query := "select id, user_name, password from m_user where id = ?"
+	query := "select id, user_name, password from m_user"
 	rows := sqlmock.NewRows([]string{"id", "user_name", "password"}).
 		AddRow(user.ID, user.UserName, user.Password)
 
-	mock.ExpectQuery(query).WithArgs(user.ID).WillReturnRows(rows)
+	mock.ExpectQuery(query).WillReturnRows(rows)
 	// ------------ end of mock ---------------
 
 	// Context like a timeout or deadline or a channel to indicate stop working and return
@@ -336,6 +360,9 @@ func TestFindAllUser(t *testing.T) {
 	defer cancel()
 
 	res, err := db.QueryContext(ctx, "select id, user_name, password from m_user")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Close()
 
 	for res.Next() {
@@ -357,7 +384,7 @@ func TestFindAllUser(t *testing.T) {
 func TestCreateUser(t *testing.T) {
 	_, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	query := "insert into m_user \\(user_name, password\\) values \\(\\?, \\?\\)"
@@ -372,7 +399,7 @@ func TestCreateUser(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	_, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	query := "update m_user set user_name =\\?, password =\\? where id =\\?"
@@ -387,7 +414,7 @@ func TestUpdateUser(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	_, mock, err := NewMock()
 	if err != nil {
-		fmt.Printf("error mock: " + err.Error())
+		fmt.Println("error mock: " + err.Error())
 	}
 
 	query := "delete from m_user where id =\\?"

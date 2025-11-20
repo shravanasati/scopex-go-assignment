@@ -37,6 +37,10 @@ func markAttendance(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if err := validateISODate(attendance.Date); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Validate date format if needed, but binding should handle basic string presence.
 	// Ideally we parse the date string to ensure it's valid YYYY-MM-DD.
