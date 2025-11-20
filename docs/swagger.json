@@ -4,6 +4,121 @@
         "contact": {}
     },
     "paths": {
+        "/attendance/mark": {
+            "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Mark attendance for a student",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Mark attendance",
+                "parameters": [
+                    {
+                        "description": "Attendance",
+                        "name": "attendance",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Attendance"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Attendance"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/{student_id}": {
+            "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Get attendance records for a student",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get attendance",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Student ID",
+                        "name": "student_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Attendance"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "login user",
@@ -105,9 +220,14 @@
                 }
             }
         },
-        "/post/": {
+        "/students/": {
             "get": {
-                "description": "get posts",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Get a list of students with pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -115,90 +235,42 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Post"
+                    "Students"
                 ],
-                "summary": "show list post",
+                "summary": "List all students",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.MPost"
+                                "$ref": "#/definitions/model.Student"
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/model.MPost"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ],
-                "description": "update by json post",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Post"
-                ],
-                "summary": "update post",
-                "parameters": [
-                    {
-                        "description": "Post ID",
-                        "name": "post",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.MPost"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.MPost"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -209,7 +281,7 @@
                         "bearerAuth": []
                     }
                 ],
-                "description": "add by json post",
+                "description": "Create a new student with the input payload",
                 "consumes": [
                     "application/json"
                 ],
@@ -217,56 +289,65 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Post"
+                    "Students"
                 ],
-                "summary": "create post",
+                "summary": "Create a new student",
                 "parameters": [
                     {
-                        "description": "Post ID",
-                        "name": "post",
+                        "description": "Student",
+                        "name": "student",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "$ref": "#/definitions/model.Student"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "$ref": "#/definitions/model.Student"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
             }
         },
-        "/post/{id}": {
+        "/students/{id}": {
             "get": {
                 "security": [
                     {
                         "bearerAuth": []
                     }
                 ],
-                "description": "get string by ID",
+                "description": "Get details of a specific student by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -274,13 +355,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Post"
+                    "Students"
                 ],
-                "summary": "show Post by id",
+                "summary": "Get a student by ID",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Post ID",
+                        "description": "Student ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -290,25 +371,87 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "$ref": "#/definitions/model.Student"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Update an existing student by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Students"
+                ],
+                "summary": "Update a student",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Student ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Student",
+                        "name": "student",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Student"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Student"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -319,7 +462,7 @@
                         "bearerAuth": []
                     }
                 ],
-                "description": "delete post by ID",
+                "description": "Delete a student by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -327,14 +470,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Post"
+                    "Students"
                 ],
-                "summary": "delete a post by id",
+                "summary": "Delete a student",
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
-                        "description": "Post ID",
+                        "description": "Student ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -344,25 +486,28 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/model.MPost"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -638,24 +783,34 @@
         }
     },
     "definitions": {
-        "model.MPost": {
+        "model.Attendance": {
             "type": "object",
+            "required": [
+                "date",
+                "status",
+                "student_id"
+            ],
             "properties": {
-                "description": {
+                "date": {
+                    "description": "Using string for date input, could be time.Time",
                     "type": "string",
-                    "example": "abcdescription"
+                    "example": "2023-10-27"
                 },
                 "id": {
                     "type": "integer",
                     "example": 1
                 },
                 "status": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "title": {
                     "type": "string",
-                    "example": "xyz"
+                    "enum": [
+                        "Present",
+                        "Absent"
+                    ],
+                    "example": "Present"
+                },
+                "student_id": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -689,6 +844,35 @@
                 "userName": {
                     "type": "string",
                     "example": "userlogin"
+                }
+            }
+        },
+        "model.Student": {
+            "type": "object",
+            "required": [
+                "email",
+                "name"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "department": {
+                    "type": "string",
+                    "example": "Computer Science"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
                 }
             }
         },

@@ -15,9 +15,9 @@ func NewRoutes() *gin.Engine {
 	// register router from each controller service
 	service.RoutesLoginLogout(v1)
 	service.RoutesUser(v1)
-	service.RoutesUserDetail(v1)
 
-	service.RoutesPost(v1)
+	service.RoutesStudent(v1)
+	service.RoutesAttendance(v1)
 
 	return router
 }

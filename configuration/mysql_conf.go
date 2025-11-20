@@ -34,5 +34,5 @@ func SetupDB() (*sql.DB, error) {
 }
 
 func confMysql(dbName string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, hostname, dbName)
+	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", username, password, hostname, dbName)
 }

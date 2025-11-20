@@ -1,18 +1,26 @@
 definitions:
-  model.MPost:
+  model.Attendance:
     properties:
-      description:
-        example: abcdescription
+      date:
+        description: Using string for date input, could be time.Time
+        example: "2023-10-27"
         type: string
       id:
         example: 1
         type: integer
       status:
-        example: true
-        type: boolean
-      title:
-        example: xyz
+        enum:
+        - Present
+        - Absent
+        example: Present
         type: string
+      student_id:
+        example: 1
+        type: integer
+    required:
+    - date
+    - status
+    - student_id
     type: object
   model.MUser:
     properties:
@@ -38,6 +46,27 @@ definitions:
         example: userlogin
         type: string
     type: object
+  model.Student:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      department:
+        example: Computer Science
+        type: string
+      email:
+        example: john.doe@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: John Doe
+        type: string
+    required:
+    - email
+    - name
+    type: object
   service.CredentialsLogin:
     properties:
       password:
@@ -59,6 +88,79 @@ definitions:
 info:
   contact: {}
 paths:
+  /attendance/{student_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get attendance records for a student
+      parameters:
+      - description: Student ID
+        in: path
+        name: student_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Attendance'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerAuth: []
+      summary: Get attendance
+      tags:
+      - Attendance
+  /attendance/mark:
+    post:
+      consumes:
+      - application/json
+      description: Mark attendance for a student
+      parameters:
+      - description: Attendance
+        in: body
+        name: attendance
+        required: true
+        schema:
+          $ref: '#/definitions/model.Attendance'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Attendance'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerAuth: []
+      summary: Mark attendance
+      tags:
+      - Attendance
   /login:
     post:
       consumes:
@@ -124,11 +226,22 @@ paths:
       summary: Logout
       tags:
       - Logout
-  /post/:
+  /students/:
     get:
       consumes:
       - application/json
-      description: get posts
+      description: Get a list of students with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
@@ -136,101 +249,67 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.MPost'
+              $ref: '#/definitions/model.Student'
             type: array
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.MPost'
         "500":
           description: Internal Server Error
           schema:
-            type: string
-      summary: show list post
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerAuth: []
+      summary: List all students
       tags:
-      - Post
+      - Students
     post:
       consumes:
       - application/json
-      description: add by json post
+      description: Create a new student with the input payload
       parameters:
-      - description: Post ID
+      - description: Student
         in: body
-        name: post
+        name: student
         required: true
         schema:
-          $ref: '#/definitions/model.MPost'
+          $ref: '#/definitions/model.Student'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/model.MPost'
+            $ref: '#/definitions/model.Student'
         "400":
           description: Bad Request
           schema:
-            type: string
-        "404":
-          description: Not Found
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
       security:
       - bearerAuth: []
-      summary: create post
+      summary: Create a new student
       tags:
-      - Post
-    put:
-      consumes:
-      - application/json
-      description: update by json post
-      parameters:
-      - description: Post ID
-        in: body
-        name: post
-        required: true
-        schema:
-          $ref: '#/definitions/model.MPost'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.MPost'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - bearerAuth: []
-      summary: update post
-      tags:
-      - Post
-  /post/{id}:
+      - Students
+  /students/{id}:
     delete:
       consumes:
       - application/json
-      description: delete post by ID
+      description: Delete a student by ID
       parameters:
-      - description: Post ID
-        format: int64
+      - description: Student ID
         in: path
         name: id
         required: true
@@ -241,30 +320,32 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MPost'
+            additionalProperties:
+              type: string
+            type: object
         "400":
           description: Bad Request
           schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.MPost'
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
       security:
       - bearerAuth: []
-      summary: delete a post by id
+      summary: Delete a student
       tags:
-      - Post
+      - Students
     get:
       consumes:
       - application/json
-      description: get string by ID
+      description: Get details of a specific student by ID
       parameters:
-      - description: Post ID
+      - description: Student ID
         in: path
         name: id
         required: true
@@ -275,24 +356,64 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MPost'
+            $ref: '#/definitions/model.Student'
         "400":
           description: Bad Request
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.MPost'
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerAuth: []
+      summary: Get a student by ID
+      tags:
+      - Students
+    put:
+      consumes:
+      - application/json
+      description: Update an existing student by ID
+      parameters:
+      - description: Student ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Student
+        in: body
+        name: student
+        required: true
+        schema:
+          $ref: '#/definitions/model.Student'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Student'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
       security:
       - bearerAuth: []
-      summary: show Post by id
+      summary: Update a student
       tags:
-      - Post
+      - Students
   /user/:
     get:
       consumes:

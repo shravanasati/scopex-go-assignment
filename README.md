@@ -19,8 +19,12 @@ go get github.com/gomodule/redigo/redis
 
 5. Import dump.sql to your MySQL and configure your credential in folder resource
 
+6. Run migrations:
+```bash
+./migrate.sh
+```
 
-6. Import __swaggo__ dependencies:
+7. Import __swaggo__ dependencies:
 ```
 go get -u github.com/swaggo/swag/cmd/swag
 go get -u github.com/swaggo/gin-swagger

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	configuration "github.com/shravanasati/scopex-go-assignment/configuration"
+	cronjob "github.com/shravanasati/scopex-go-assignment/cronjob"
 	docs "github.com/shravanasati/scopex-go-assignment/docs"
 	router "github.com/shravanasati/scopex-go-assignment/router"
 	util "github.com/shravanasati/scopex-go-assignment/util"
@@ -38,6 +39,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer configuration.DB.Close()
+
+	// Start Cron Jobs
+	cronjob.InitCron()
 
 	port := viper.GetString("PORT")
 
