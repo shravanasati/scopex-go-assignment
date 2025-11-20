@@ -12,12 +12,16 @@ func ReadConfig() {
 	// default ==> setx APP_ENVIRONMENT STAGING
 	//Or in main.go init func set os.Setenv("APP_ENVIRONMENT", "STAGING")
 	//fmt.Println("os.Getenv", os.Getenv)
-	if os.Getenv("APP_ENVIRONMENT") == "STAGING" {
+	APP_ENV := os.Getenv("APP_ENVIRONMENT")
+	if APP_ENV == "" {
+		APP_ENV = "STAGING"
+	}
+	if APP_ENV == "STAGING" {
 		viper.SetConfigName("properties-staging")
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath("./resource")
 		//viper.SetConfigFile("/resource/properties-staging")
-	} else if os.Getenv("APP_ENVIRONMENT") == "PROD" {
+	} else if APP_ENV == "PROD" {
 		viper.SetConfigName("properties-prod")
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath("./resource")

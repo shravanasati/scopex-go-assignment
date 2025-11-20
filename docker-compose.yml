@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8999:8999"
+    environment:
+      - APP_ENVIRONMENT=PROD
+    depends_on:
+      - db
+      - redis
+    networks:
+      - scopex-network
+
+  db:
+    image: mysql:latest
+    container_name: scopex-mysqll
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: scopex-assignment
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: "!Secret1234"
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./migration.sql:/docker-entrypoint-initdb.d/migration.sql
+    networks:
+      - scopex-network
+
+  redis:
+    image: redis:latest
+    container_name: scopex-rediss
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - scopex-network
+
+networks:
+  scopex-network:
+    driver: bridge
+
+volumes:
+  db_data:

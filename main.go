@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	configuration "github.com/shravanasati/scopex-go-assignment/configuration"
 	cronjob "github.com/shravanasati/scopex-go-assignment/cronjob"
@@ -16,8 +15,6 @@ import (
 )
 
 func init() {
-
-	os.Setenv("APP_ENVIRONMENT", "STAGING")
 
 	// read config environment
 	configuration.ReadConfig()

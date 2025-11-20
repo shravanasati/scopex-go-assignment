@@ -2,7 +2,7 @@ DB:
   USER_NAME: "homestead"
   PASSWORD: "!Secret1234"
   HOST_NAME: "db:3306"
-  NAME: "go-gin-rest-mysql-redis"
+  NAME: "scopex-assignment"
 REDIS:
   DSN: "redis:6379"
   MAX_ACTIVE: 50

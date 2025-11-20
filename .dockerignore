@@ -1,0 +1,31 @@
+# Version control
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go build artifacts
+*.exe
+*.test
+*.out
+main
+bin/
+vendor/
+
+# Logs
+*.log
+
+README.md
+
+# Scripts and Configs not needed in the container
+swaggo.sh
+stella.yml
