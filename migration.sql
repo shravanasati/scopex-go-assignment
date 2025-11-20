@@ -45,4 +45,5 @@ CREATE TABLE attendance (
 );
 
 CREATE INDEX idx_students_email ON students(email);
+CREATE INDEX idx_students_id ON students(id);
 CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);

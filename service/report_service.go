@@ -3,9 +3,11 @@ package service
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	repository "github.com/shravanasati/scopex-go-assignment/repository"
+	"github.com/shravanasati/scopex-go-assignment/util"
 )
 
 // GenerateWeeklyReport generates and prints weekly attendance reports for all students
@@ -22,13 +24,23 @@ func GenerateWeeklyReport() {
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	for _, report := range reports {
 		output := fmt.Sprintf(
 			"Weekly Report for %s (%s)\nPeriod: %s to %s\nPresent: %d, Absent: %d\n-----------------------------",
 			report.StudentName, report.StudentEmail, startDate, endDate, report.PresentCount, report.AbsentCount,
 		)
 		fmt.Println(output)
+
+		wg.Add(1)
+		go func() {
+			util.SendEmail(report)
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
 	log.Println("Weekly Attendance Report Generation Completed.")
 }
 
@@ -46,12 +58,23 @@ func GenerateMonthlyReport() {
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	for _, report := range reports {
 		output := fmt.Sprintf(
 			"Monthly Report for %s (%s)\nPeriod: %s to %s\nPresent: %d, Absent: %d\n-----------------------------",
 			report.StudentName, report.StudentEmail, startDate, endDate, report.PresentCount, report.AbsentCount,
 		)
 		fmt.Println(output)
+
+		wg.Add(1)
+		go func() {
+			util.SendEmail(report)
+			wg.Done()
+		}()
+
 	}
+
+	wg.Wait()
 	log.Println("Monthly Attendance Report Generation Completed.")
 }
