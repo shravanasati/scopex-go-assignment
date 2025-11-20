@@ -4,7 +4,7 @@
 
 3. ```cd scopex-go-assignment```
 
-	> If you want attendance report notifications via email, add `RESEND_API_KEY` under environment key of app service in the `docker-compose.yml` file. API key can be obtained from [resend.com](https:///resend.com).
+	> [OPTIONAL] If you want attendance report notifications via email, add `RESEND_API_KEY` under environment key of app service in the `docker-compose.yml` file. API key can be obtained from [resend.com](https:///resend.com). 
 
 4. ```docker compose up --build```
 
