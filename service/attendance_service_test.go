@@ -17,3 +17,9 @@ func TestMarkAttendanceRejectsInvalidDate(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Equal(t, "date must be in YYYY-MM-DD format", resp["error"])
 }
+
+func TestGetAttendanceRejectsID(t *testing.T) {
+	rr, _ := performJSONRequest(getAttendance, http.MethodGet, "/attendance/should-be-a-number", nil)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
