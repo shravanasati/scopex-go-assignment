@@ -11,16 +11,16 @@ import (
 func InitCron() {
 	c := cron.New()
 
-	// Weekly Report - Every Sunday at midnight
-	_, err := c.AddFunc("0 0 * * 0", func() {
+	// Weekly Report - Every Sunday at midnight 0 0 * * 0
+	_, err := c.AddFunc("* * * * *", func() {
 		service.GenerateWeeklyReport()
 	})
 	if err != nil {
 		log.Fatal("Error adding weekly cron job: ", err)
 	}
 
-	// Monthly Report - 1st of every month at midnight
-	_, err = c.AddFunc("0 0 1 * *", func() {
+	// Monthly Report - 1st of every month at midnight 0 0 1 * *
+	_, err = c.AddFunc("*/2 * * * *", func() {
 		service.GenerateMonthlyReport()
 	})
 	if err != nil {

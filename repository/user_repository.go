@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"log"
 	"strconv"
+	"time"
 
 	configuration "github.com/shravanasati/scopex-go-assignment/configuration"
 	model "github.com/shravanasati/scopex-go-assignment/model"
@@ -22,10 +24,12 @@ import (
 // GetUserByID ...
 func GetUserByID(id int64) (model.MUser, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	var user model.MUser
 
-	result, err := db.Query("select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user where id = ?", id)
+	result, err := db.QueryContext(ctx, "select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user where id = ?", id)
 	if err != nil {
 		// print stack trace
 		log.Println("Error query user: " + err.Error())
@@ -59,7 +63,7 @@ func GetUserLogin(username string, password string) (model.MUser, error) {
 	}
 
 	var retVal bool = util.CheckPasswordHash(password, mUser.Password)
-	if retVal == false {
+	if !retVal {
 		return mUser, errors.New("wrong password")
 	}
 
@@ -69,9 +73,11 @@ func GetUserLogin(username string, password string) (model.MUser, error) {
 // GetUserByUsername ...
 func GetUserByUsername(username string) (model.MUser, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	var mUser model.MUser
-	result, err := db.Query("select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user where user_name = ?", username)
+	result, err := db.QueryContext(ctx, "select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user where user_name = ?", username)
 	if err != nil {
 		return mUser, err
 	}
@@ -89,11 +95,13 @@ func GetUserByUsername(username string) (model.MUser, error) {
 // GetUserAll ...
 func GetUserAll() ([]model.MUser, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	var mUser model.MUser
 	var mUsers []model.MUser
 
-	rows, err := db.Query("select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user")
+	rows, err := db.QueryContext(ctx, "select id, user_name, password, account_expired, account_locked, credentials_expired, enabled from m_user")
 	if err != nil {
 		log.Println("Error query user: " + err.Error())
 		return mUsers, err
@@ -113,19 +121,21 @@ func GetUserAll() ([]model.MUser, error) {
 // CreateUser ...
 func CreateUser(mUser model.MUser) (model.MUser, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	var err error
 
 	hash, _ := util.HashPassword(mUser.Password, bcrypt.DefaultCost)
 	mUser.Password = hash
 
-	crt, err := db.Prepare("insert into m_user (user_name, password, account_expired, account_locked, credentials_expired, enabled) values (?, ?, ?, ?, ?, ?)")
+	crt, err := db.PrepareContext(ctx, "insert into m_user (user_name, password, account_expired, account_locked, credentials_expired, enabled) values (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Panic(err)
 		return mUser, err
 	}
 
-	res, err := crt.Exec(mUser.UserName, mUser.Password, mUser.AccountExpired,
+	res, err := crt.ExecContext(ctx, mUser.UserName, mUser.Password, mUser.AccountExpired,
 		mUser.AccountLocked, mUser.CredentialsExpired, mUser.Enabled)
 	if err != nil {
 		log.Panic(err)
@@ -153,17 +163,19 @@ func CreateUser(mUser model.MUser) (model.MUser, error) {
 // UpdateUser ...
 func UpdateUser(mUser model.MUser) (model.MUser, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	var err error
 
 	hash, _ := util.HashPassword(mUser.Password, bcrypt.DefaultCost)
 	mUser.Password = hash
 
-	crt, err := db.Prepare("update m_user set user_name =?, password =?, account_expired =?, account_locked =?, credentials_expired =?, enabled =? where id=?")
+	crt, err := db.PrepareContext(ctx, "update m_user set user_name =?, password =?, account_expired =?, account_locked =?, credentials_expired =?, enabled =? where id=?")
 	if err != nil {
 		return mUser, err
 	}
-	_, queryError := crt.Exec(mUser.ID, mUser.UserName, mUser.Password, mUser.AccountExpired,
+	_, queryError := crt.ExecContext(ctx, mUser.ID, mUser.UserName, mUser.Password, mUser.AccountExpired,
 		mUser.AccountLocked, mUser.CredentialsExpired, mUser.Enabled)
 	if queryError != nil {
 		return mUser, err
@@ -181,6 +193,8 @@ func UpdateUser(mUser model.MUser) (model.MUser, error) {
 // DeleteUserByID ...
 func DeleteUserByID(id int64) error {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	res, err := GetUserByID(id)
 	if err != nil {
@@ -192,11 +206,11 @@ func DeleteUserByID(id int64) error {
 		return errors.New("no record value with id: %v" + s)
 	}
 
-	crt, err := db.Prepare("delete from m_user where id=?")
+	crt, err := db.PrepareContext(ctx, "delete from m_user where id=?")
 	if err != nil {
 		return err
 	}
-	_, queryError := crt.Exec(id)
+	_, queryError := crt.ExecContext(ctx, id)
 	if queryError != nil {
 		return err
 	}

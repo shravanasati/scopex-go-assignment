@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	configuration "github.com/shravanasati/scopex-go-assignment/configuration"
 	model "github.com/shravanasati/scopex-go-assignment/model"
@@ -24,15 +26,18 @@ var StudentRepo StudentRepository = &studentRepository{}
 // CreateStudent inserts a new student into the database
 func (r *studentRepository) CreateStudent(student model.Student) (int64, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := "INSERT INTO students (name, email, department) VALUES (?, ?, ?)"
-	stmt, err := db.Prepare(query)
+	stmt, err := db.PrepareContext(ctx, query)
 	if err != nil {
 		log.Println("Error preparing statement: " + err.Error())
 		return 0, err
 	}
 	defer stmt.Close()
 
-	result, err := stmt.Exec(student.Name, student.Email, student.Department)
+	result, err := stmt.ExecContext(ctx, student.Name, student.Email, student.Department)
 	if err != nil {
 		log.Println("Error inserting student: " + err.Error())
 		return 0, err
@@ -49,10 +54,13 @@ func (r *studentRepository) CreateStudent(student model.Student) (int64, error) 
 // GetAllStudents retrieves all students with pagination
 func (r *studentRepository) GetAllStudents(limit, offset int) (model.Students, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var students model.Students
 
 	query := "SELECT id, name, email, department, created_at FROM students LIMIT ? OFFSET ?"
-	rows, err := db.Query(query, limit, offset)
+	rows, err := db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		log.Println("Error querying students: " + err.Error())
 		return nil, err
@@ -78,10 +86,13 @@ func (r *studentRepository) GetAllStudents(limit, offset int) (model.Students, e
 // GetStudentByID retrieves a student by ID
 func (r *studentRepository) GetStudentByID(id int64) (model.Student, error) {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var s model.Student
 
 	query := "SELECT id, name, email, department, created_at FROM students WHERE id = ?"
-	err := db.QueryRow(query, id).Scan(&s.ID, &s.Name, &s.Email, &s.Department, &s.CreatedAt)
+	err := db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.Email, &s.Department, &s.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return s, fmt.Errorf("student not found")
@@ -96,14 +107,17 @@ func (r *studentRepository) GetStudentByID(id int64) (model.Student, error) {
 // UpdateStudent updates an existing student
 func (r *studentRepository) UpdateStudent(id int64, student model.Student) error {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := "UPDATE students SET name = ?, email = ?, department = ? WHERE id = ?"
-	stmt, err := db.Prepare(query)
+	stmt, err := db.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(student.Name, student.Email, student.Department, id)
+	_, err = stmt.ExecContext(ctx, student.Name, student.Email, student.Department, id)
 	if err != nil {
 		log.Println("Error updating student: " + err.Error())
 		return err
@@ -115,14 +129,17 @@ func (r *studentRepository) UpdateStudent(id int64, student model.Student) error
 // DeleteStudent deletes a student by ID
 func (r *studentRepository) DeleteStudent(id int64) error {
 	db := configuration.DB
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := "DELETE FROM students WHERE id = ?"
-	stmt, err := db.Prepare(query)
+	stmt, err := db.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(id)
+	_, err = stmt.ExecContext(ctx, id)
 	if err != nil {
 		log.Println("Error deleting student: " + err.Error())
 		return err
